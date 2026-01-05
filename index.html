@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLIND WHEEL</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  width:100vw;height:100vh;
+  background:linear-gradient(180deg,#0f2027,#203a43,#2c5364);
+  font-family:Segoe UI,Arial,sans-serif;
+  color:#fff;
+  overflow:hidden;
+}
+.header{text-align:center;padding:18px;font-size:20px;font-weight:700}
+.sub{font-size:12px;opacity:.7;margin-top:4px}
+.main{
+  height:calc(100vh - 90px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.card{
+  background:rgba(255,255,255,.08);
+  padding:24px;
+  border-radius:18px;
+  width:320px;
+  text-align:center;
+  position:relative;
+}
+.arrow{
+  position:absolute;
+  top:8px;left:50%;
+  transform:translateX(-50%);
+  font-size:22px;
+}
+canvas{background:#fff;border-radius:50%}
+.btn{
+  width:100%;padding:14px;margin-top:16px;
+  border:none;border-radius:10px;
+  font-weight:700;font-size:16px;
+  cursor:pointer;
+}
+#spinBtn{background:#f1c40f;color:#000}
+.request{background:#3498db;color:#fff}
+#result{margin-top:12px;font-weight:700}
+.watermark{
+  position:fixed;
+  bottom:8px;right:10px;
+  font-size:11px;opacity:.5
+}
+
+/* ADMIN PANEL */
+#adminPanel{
+  display:none;
+  position:fixed;
+  top:10px;left:10px;
+  background:#000;
+  padding:12px;
+  border-radius:8px;
+  font-size:12px;
+  z-index:9999;
+}
+#adminPanel select,
+#adminPanel button{
+  width:100%;
+  margin-top:6px;
+  padding:6px;
+  font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  🎉 OFFICIAL BLIND WHEEL
+  <div class="sub">Spin & Get Your Exclusive Reward</div>
+  <div class="sub">CREATED BY : @darr.universe & leexaa_05</div>
+</div>
+
+<div class="main">
+  <div class="card">
+    <div class="arrow">▼</div>
+    <canvas id="wheel" width="260" height="260"></canvas>
+    <button id="spinBtn" class="btn">SPIN NOW</button>
+    <button id="requestBtn" class="btn request" style="display:none">
+      REQUEST OWNER ACCESS
+    </button>
+    <div id="result"></div>
+  </div>
+</div>
+
+<div class="watermark">CREATED BY : @darr.universe & leexaa_05</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
+  <b>ADMIN MODE</b>
+  <select id="adminResult">
+    <option value="">-- Pilih Hasil Spin --</option>
+    <option value="ZONK">ZONK</option>
+    <option value="YouTube Premium">YouTube Premium</option>
+    <option value="Netflix Premium">Netflix Premium</option>
+    <option value="Saldo 100K">Saldo 100K</option>
+    <option value="Saldo 50K">Saldo 50K</option>
+  </select>
+  <button onclick="applyResult()">Set Hasil</button>
+  <button onclick="resetSpin()">Reset Spin</button>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const ADMIN_PIN = "0508"; // GANTI PIN INI
+
+const items = [
+  "YouTube Premium",
+  "ZONK",
+  "Netflix Premium",
+  "ZONK",
+  "Saldo 100K",
+  "ZONK",
+  "Saldo 50K"
+];
+
+let forcedResult = null;
+
+/* ================= CANVAS ================= */
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const spinBtn = document.getElementById("spinBtn");
+const requestBtn = document.getElementById("requestBtn");
+const result = document.getElementById("result");
+
+const size = canvas.width;
+const center = size/2;
+const radius = center;
+const slice = (Math.PI*2)/items.length;
+let angle = 0;
+
+/* ================= DRAW ================= */
+function drawWheel(){
+  for(let i=0;i<items.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(center,center);
+    ctx.arc(center,center,radius,angle+i*slice,angle+(i+1)*slice);
+    ctx.fillStyle = i%2 ? "#ecf0f1" : "#bdc3c7";
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(center,center);
+    ctx.rotate(angle+(i+0.5)*slice);
+    ctx.textAlign="right";
+    ctx.fillStyle="#000";
+    ctx.font="bold 13px Arial";
+    ctx.fillText(items[i],radius-10,5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+/* ================= SOUND ================= */
+function playSpinSound(){
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const osc = audioCtx.createOscillator();
+  osc.type="square";
+  osc.frequency.value=600;
+  osc.connect(audioCtx.destination);
+  osc.start();
+  setTimeout(()=>osc.stop(),100);
+}
+
+/* ================= 1x SPIN ================= */
+if(localStorage.getItem("spinned")){
+  spinBtn.disabled=true;
+  result.innerText="❌ Kamu sudah spin";
+  requestBtn.style.display="block";
+}
+
+spinBtn.onclick=()=>{
+  spinBtn.disabled=true;
+  localStorage.setItem("spinned","yes");
+
+  let speed=0;
+  const spin=setInterval(()=>{
+    speed+=0.25;
+    angle+=0.25;
+    playSpinSound();
+    ctx.clearRect(0,0,size,size);
+    drawWheel();
+
+    if(speed>12){
+      clearInterval(spin);
+      let finalResult = forcedResult ? forcedResult : "ZONK";
+      result.innerText="🎁 HASIL: "+finalResult;
+      forcedResult=null;
+      requestBtn.style.display="block";
+    }
+  },40);
+};
+
+/* ================= OWNER PASSWORD ================= */
+requestBtn.onclick=()=>{
+  const pass=prompt("Masukkan PASSWORD OWNER:");
+  if(pass==="darlexa123"){
+    localStorage.removeItem("spinned");
+    alert("Akses diberikan. Refresh halaman.");
+  }else{
+    alert("Password salah.");
+  }
+};
+
+/* ================= ADMIN TAP (HP) ================= */
+let tapCount=0;
+let tapTimer=null;
+
+document.querySelector(".header").addEventListener("click",()=>{
+  tapCount++;
+  if(tapCount===1){
+    tapTimer=setTimeout(()=>tapCount=0,1500);
+  }
+  if(tapCount===5){
+    clearTimeout(tapTimer);
+    tapCount=0;
+    const pin=prompt("Masukkan PIN ADMIN:");
+    if(pin===ADMIN_PIN){
+      document.getElementById("adminPanel").style.display="block";
+      alert("ADMIN MODE AKTIF");
+    }else{
+      alert("PIN SALAH");
+    }
+  }
+});
+
+/* ================= ADMIN ACTION ================= */
+function applyResult(){
+  const val=document.getElementById("adminResult").value;
+  if(!val){
+    alert("Pilih hasil dulu");
+    return;
+  }
+  forcedResult=val;
+  alert("Hasil spin berikutnya: "+val);
+}
+
+function resetSpin(){
+  localStorage.removeItem("spinned");
+  alert("Spin berhasil direset (ADMIN)");
+}
+</script>
+
+</body>
+</html>
